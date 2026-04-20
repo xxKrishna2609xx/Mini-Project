@@ -1,10 +1,30 @@
 import streamlit as st
 import time
-from utils.ml_logic import predict_job, highlight_suspicious_keywords
+from utils.ml_logic import predict_job, highlight_suspicious_keywords, is_valid_english_job_text, get_shap_explanations
 
-def render_predict(model, vectorizer):
+def render_predict(models, vectorizer):
     st.markdown("<h2 class='sub-header'>🔍 Authenticity Checker</h2>", unsafe_allow_html=True)
     
+    # Model Selection UI
+    st.markdown("### 🧠 Model Selection")
+    col_mod_1, col_mod_2 = st.columns([1, 2])
+    with col_mod_1:
+        model_name = st.selectbox("Choose ML Model", list(models.keys()), index=0)
+        selected_model = models[model_name]
+    with col_mod_2:
+        st.write("") # spacing
+        st.write("") # spacing
+        compare_all = st.toggle("Compare All Models side-by-side", help="Run predictions across all available models.")
+        
+    model_descriptions = {
+        "Random Forest": "🌟 **Ensemble model** providing high accuracy and balanced precision/recall, minimizing false positives.",
+        "Logistic Regression": "⚡ **Fast and interpretable** linear classifier, excellent as a robust baseline.",
+        "Naive Bayes": "📊 **Probabilistic model** (MultinomialNB) highly effective for text classification and spam detection."
+    }
+    st.info(model_descriptions.get(model_name, ""))
+    
+    st.markdown("---")
+
     # Initialize session state for multiple entries
     if "manual_entry_count" not in st.session_state:
         st.session_state.manual_entry_count = 1
@@ -93,44 +113,88 @@ def render_predict(model, vectorizer):
                         st.warning(f"**{job['title']}**: Text too short (at least 10 characters required) to analyze.")
                         continue
                         
-                    is_scam, confidence = predict_job(job['text'], model, vectorizer)
-                    
-                    if is_scam is not None:
+                    # Dictionary Validation / Gibberish Check
+                    is_valid, invalid_reason = is_valid_english_job_text(job['text'])
+                    if not is_valid:
                         company_str = f" at {job['company']}" if job['company'] and job['company'] != "Uploaded File" else ""
                         st.markdown(f"#### {job['title']}{company_str}")
-                        
-                        # Highlight Text
-                        highlighted_diff, flags = highlight_suspicious_keywords(job['text'])
-                        
-                        if is_scam:
-                            st.markdown(
-                                f"""
-                                <div class='result-card-scam' style='padding: 15px; border-radius: 8px;'>
-                                    <h3 style='margin-top: 0;'>🚨 SCAM DETECTED</h3>
-                                    <p style='margin-bottom: 0;'>This job posting exhibits characteristics commonly associated with fraudulent offers.</p>
-                                </div>
-                                """, unsafe_allow_html=True
-                            )
-                        else:
-                            st.markdown(
-                                f"""
-                                <div class='result-card-genuine' style='padding: 15px; border-radius: 8px;'>
-                                    <h3 style='margin-top: 0;'>✅ GENUINE JOB</h3>
-                                    <p style='margin-bottom: 0;'>This job posting looks legitimate based on our model's criteria.</p>
-                                </div>
-                                """, unsafe_allow_html=True
-                            )
-                        
-                        # Metrics & Confidence
-                        st.write(f"**Model Confidence:** {confidence:.2%}")
-                        st.progress(float(confidence))
-                        
-                        # Flag findings
-                        if flags:
-                            st.warning(f"🚩 **Suspicious Keywords Found:** {', '.join(flags)}")
-                            with st.expander(f"View Highlighted Text for {job['title']}"):
-                                st.markdown(highlighted_diff, unsafe_allow_html=True)
-                        else:
-                            st.info("No common suspicious keywords detected in the text structure.")
-                        
+                        st.error(f"🚫 **INVALID TEXT DETECTED:** {invalid_reason} The machine learning models cannot accurately assess gibberish or heavily malformed input strings.")
                         st.markdown("<br>", unsafe_allow_html=True)
+                        continue
+                        
+                    # Execute model analysis block
+                    company_str = f" at {job['company']}" if job['company'] and job['company'] != "Uploaded File" else ""
+                    st.markdown(f"#### {job['title']}{company_str}")
+                    
+                    highlighted_diff, flags, top_tfidf = highlight_suspicious_keywords(job['text'], vectorizer, top_n=5)
+                    
+                    models_to_run = models if compare_all else {model_name: selected_model}
+                    
+                    cols = st.columns(len(models_to_run))
+                    
+                    for idx, (m_name, m_obj) in enumerate(models_to_run.items()):
+                        is_scam, confidence = predict_job(job['text'], m_obj, vectorizer)
+                        
+                        with cols[idx]:
+                            if is_scam:
+                                st.markdown(
+                                    f"""
+                                    <div class='result-card-scam' style='padding: 15px; border-radius: 8px;'>
+                                        <div style='font-size:0.8rem; opacity: 0.7; color: white;'>Model: {m_name}</div>
+                                        <h3 style='margin-top: 5px; color: white;'>🚨 SCAM</h3>
+                                    </div>
+                                    """, unsafe_allow_html=True
+                                )
+                            else:
+                                st.markdown(
+                                    f"""
+                                    <div class='result-card-genuine' style='padding: 15px; border-radius: 8px;'>
+                                        <div style='font-size:0.8rem; opacity: 0.7; color: white;'>Model: {m_name}</div>
+                                        <h3 style='margin-top: 5px; color: white;'>✅ GENUINE</h3>
+                                    </div>
+                                    """, unsafe_allow_html=True
+                                )
+                                
+                            st.write(f"**Confidence:** {confidence:.2%}")
+                            st.progress(float(confidence))
+                            
+                    st.markdown("##### 🧠 Explainability")
+                    col_expl_1, col_expl_2 = st.columns(2)
+                    with col_expl_1:
+                        if flags:
+                            st.warning(f"🚩 **Top Suspicious Keywords Detected:** {', '.join(flags)}")
+                        else:
+                            st.info("No common suspicious keywords detected.")
+                    with col_expl_2:
+                        if top_tfidf:
+                            st.success(f"🔑 **Most Influential Words (TF-IDF):** {', '.join(top_tfidf)}")
+                        else:
+                            st.info("Insufficient TF-IDF influencers extracted.")
+
+                    if flags or top_tfidf:
+                        with st.expander(f"View Keyword Highlighting for {job['title']}"):
+                            st.markdown(highlighted_diff, unsafe_allow_html=True)
+                            
+                    st.markdown("<hr style='margin: 15px 0; opacity: 0.2;'>", unsafe_allow_html=True)
+                    st.markdown(f"##### 🧠 AI Explanation (Model-Based approach via {model_name})")
+                    
+                    top_scam, top_genuine = get_shap_explanations(job['text'], selected_model, model_name, vectorizer)
+                    
+                    if top_scam or top_genuine:
+                        col_s1, col_s2 = st.columns(2)
+                        with col_s1:
+                            if top_scam:
+                                scam_strs = [f"- **\"{w}\"** → strong scam signal" for w,v in top_scam]
+                                st.error("⚠️ **Influential Scam Drivers:**\n\n" + "\n".join(scam_strs))
+                            else:
+                                st.info("No strong scam drivers found.")
+                        with col_s2:
+                            if top_genuine:
+                                gen_strs = [f"- **\"{w}\"** → genuine signal" for w,v in top_genuine]
+                                st.success("✅ **Influential Genuine Drivers:**\n\n" + "\n".join(gen_strs))
+                            else:
+                                st.info("No strong genuine drivers found.")
+                    else:
+                        st.info(f"Native model-based SHAP explanations are unsupported for {model_name}.")
+                        
+                    st.markdown("<br>", unsafe_allow_html=True)
