@@ -1,0 +1,93 @@
+/* General Styles */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Gradient Header */
+.main-header {
+    background: linear-gradient(135deg, #1f4037 0%, #99f2c8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    font-size: 3rem;
+    margin-bottom: 0px;
+    padding-bottom: 0px;
+}
+
+.sub-header {
+    font-size: 1.2rem;
+    color: #6c757d;
+    margin-top: 0px;
+    margin-bottom: 2rem;
+}
+
+/* Styled Cards for Results */
+.result-card-genuine {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #c3e6cb;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.result-card-scam {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    color: #721c24;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid #f5c6cb;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Highlighted Keywords */
+.highlight-scam {
+    background-color: #ffcccc;
+    color: #cc0000;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Footer */
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: transparent;
+    color: gray;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+/* Make text area labels bold */
+.stTextArea label, .stTextInput label {
+    font-weight: bold;
+    color: #444;
+}
+
+/* Enhance buttons */
+.stButton>button {
+    width: 100%;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: all 0.3s;
+}
+
+.stButton>button:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
