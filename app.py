@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-
+import json
 # Page Config must be the first Streamlit command
 st.set_page_config(
     page_title="Job Scam Detector",
@@ -25,7 +25,13 @@ from views.about import render_about
 from utils.ml_logic import load_models
 
 # Load Models globally
-model, vectorizer = load_models()
+models, vectorizer = load_models()
+
+# Load Metrics globally
+metrics = {}
+if os.path.exists("metrics.json"):
+    with open("metrics.json", "r") as f:
+        metrics = json.load(f)
 
 # Main Header
 st.markdown("<h1 class='main-header'>🛡️ Fake Job & Internship Scam Detection System</h1>", unsafe_allow_html=True)
@@ -42,7 +48,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### System Status")
-    if model and vectorizer:
+    if models and vectorizer:
         st.success("✅ Models Loaded")
     else:
         st.error("❌ Models Missing")
@@ -50,9 +56,9 @@ with st.sidebar:
 
 # Page Routing
 if page == "🏠 Home (Prediction)":
-    render_predict(model, vectorizer)
+    render_predict(models, vectorizer)
 elif page == "📊 Model Insights":
-    render_insights()
+    render_insights(metrics)
 elif page == "📂 Dataset Preview":
     render_dataset()
 elif page == "📘 About Project":
