@@ -3,6 +3,13 @@
 ## Overview
 This project provides a simple web app for exploring a dataset, viewing insights, and running predictions from a mock ML model.
 
+## Project Details
+- Purpose: demonstrate a lightweight data exploration and prediction workflow.
+- Data source: `fake_job_postings.csv` (used for dataset browsing and insights).
+- Insights: summary metrics are computed from the dataset and shown in the UI.
+- Prediction: a mock model in `utils/ml_logic.py` powers the prediction endpoint.
+- Views: routes are organized under `views/` for about, dataset, insights, and prediction pages.
+
 ## Quick Start
 
 ### 1) Create and activate a virtual environment
