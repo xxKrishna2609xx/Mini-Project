@@ -12,7 +12,7 @@ This project provides a simple web app for exploring a dataset, viewing insights
 
 ## Quick Start
 
-### 1) Create and activate a virtual environment
+### 1) Create and activate a virtual environmentt
 ```powershell
 python -m venv venv
 .
